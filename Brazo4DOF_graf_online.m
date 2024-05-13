@@ -22,8 +22,8 @@ b=0;
 c=0;
 
 rosshutdown
-setenv('ROS_MASTER_URI','http://192.168.88.223:11311')
-setenv('ROS_IP','192.168.88.104')
+setenv('ROS_MASTER_URI','http://192.168.88.252:11311')
+% setenv('ROS_IP','192.168.88.104')
 rosinit
 
   
@@ -33,10 +33,7 @@ armSub = rossubscriber('/dynamixel_workbench/joint_states');
 [pos_arm,ver_arm,current_arm] = dynamixeldata(armSub);
 
 
-
-
 %%
-
 
 
 %%
@@ -57,30 +54,28 @@ M_1=Manipulador3D(0,0,0,q1(1),q2(1),q3(1),q4(1));
 M_2 = plot3(0,0,0,'*');
 
 while 1
-tic
-drawnow
+        tic
+        
+        [pos_arm, ver_arm, current_arm] = dynamixeldata(armSub);
+        q1 = pos_arm(1);
+        q2 = pos_arm(2);
+        q3 = pos_arm(3);
+        q4 = pos_arm(4);   
 
-delete(M_1);
-delete(M_2);
+        delete(M_1)
+        M_1 = Manipulador3D(0, 0, 0, q1, q2, q3, q4);
 
-[pos_arm,ver_arm,current_arm] = dynamixeldata(armSub);
-q1 = pos_arm(1);
-q2 = pos_arm(2);
-q3 = pos_arm(3);
-q4 = pos_arm(4);   
+        h = CDArm4DOF(l1, l2, l3, l4, [q1, q2, q3, q4]);
+        set(M_2, 'XData', h(1), 'YData', h(2), 'ZData', h(3));
 
+        toc
+        pause(0.1)
 
-M_1=Manipulador3D(0,0,0,q1,q2,q3,q4);
-
-
-
-h = CDArm4DOF(l1,l2,l3,l4,[q1,q2,q3,q4]);
-M_2 = plot3(h(1),h(2),h(3),'*');  hold on
-
-toc
-pause(0.1)
- 
-end
+end  
+    
+    
+    
+    
 %%
 %   plot3(x,y,z,'o');
   

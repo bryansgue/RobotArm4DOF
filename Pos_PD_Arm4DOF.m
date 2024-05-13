@@ -58,7 +58,7 @@ l3 =0.071;
 l4 =0.15;
 
 q1d = 45 * pi/180;
-q2d = 80 * pi/180;
+q2d = 60 * pi/180;
 q3d = -30 * pi/180;
 q4d = -30 * pi/180;
 
@@ -69,6 +69,9 @@ I4 = 0.1;
 
 G = Matrix_G_4DOF(m1,m2,m3,m4,I1,I2,I3,I4,l1,l2,l3,l4,q(1,1),q(2,1),q(3,1),q(4,1));
 
+
+
+%%
 for k = 1:length(t)
 %1)Errores de control
    %a)Errores de posici�n articular para q1 y q2
@@ -116,6 +119,8 @@ for k = 1:length(t)
 
    
    h(:,k+1) = CDArm4DOF(l1,l2,l3,l4,q(:,k+1));
+   
+   
    
 end
 

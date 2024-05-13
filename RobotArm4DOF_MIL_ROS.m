@@ -3,8 +3,9 @@
 %*******************************CONTROL DE POSICION SCARA***************************************************
 %**********************************************************************************************************
 clc; clear all; close all; warning off;
-tfin = 100; 
-ts   = .1;
+tfin = 60; 
+f = 30
+ts   = 1/f;
 t    = 0:ts:tfin;
 %% CONDICIONES INICIALES
 q1(1) = 0*pi/180;               %ESLABON1
@@ -12,67 +13,54 @@ q2(1) = 45*pi/180;               %Posición articulacion dos
 q3(1) = -30*pi/180;               %Posición articulacion tres
 q4(1) = -15*pi/180;
 
-% POSICIONES DESEADAS DE LOS ESLABONES PARA AHORRAR ENERGIA
-q1d = 30*pi/180;               
-q2d = -40*pi/180;               
-q3d = -25*pi/180;               
-q4d = 20*pi/180;
 
-%% DISTANCIAS DE LOS ESLABONES
+q(:,1) = [q1,q2,q3,q4];
 
 l1 =0.07;
 l2 =0.071;            
 l3 =0.071;          
 l4 =0.15;
 
-q(:,1) = [q1,q2,q3,q4];
-%% CINEMATICA DIRECTA 
-h = CDArm4DOF(l1,l2,l3,l4,q(:,1));
-hx=h(1);
-hy=h(2);
-hz=h(3);
-   
-%% TRAYECTORIA DESEADA GRIPPER
-% hxd= 0.2;
-% hyd= 0.5; 
-% hzd= 0.3;
+
+%%Configuracion de ROS
+% Cerrar el nodo de ROS
+rosshutdown;
+rosinit;
+
+%% CONFIGURACION PUBLICADOR
+[state_topic, state_msg] = rospublisher('/states','sensor_msgs/Joy');
+axe = zeros(1, 8);
+% Establecer los valores de axe en el mensaje
+state_msg.Axes = axe;
+% Publicar el mensaje en el tópico '/states'
+send(state_topic, state_msg);
 
 
-% hxd= 4 * np.sin(value*0.04*t) + 3;
-% hyd= 0.5 * np.sin(0.08*t); 
-% hzd= 2 * np.sin(value*0.08*t) + 6
-value  = 1
-hxd =  0.025 * sin(value*0.08*t)  + 0.15
-hyd = 0.1 * sin(value*0.04*t)
-hzd = 0.05 * sin(value*0.08*t)  + 0.1
-
-hd = [hxd; hyd; hzd];
-% %% VELOCIDAD DESEADA
-hxdp=  0.025 * value* 0.08 * cos(value*0.08*t);
-hydp= 0.1 * value * 0.04 * cos(value*0.04*t);
-hzdp= 0.05 * value* 0.08 * cos(value*0.08*t);
+%% CONFIGURACION SUSCRIPTOR
+% Crear el suscriptor para el mensaje de Odometría
+  control_sub = rossubscriber('/control');
 
 %% CONTROL
 tic
 for k=1:length(t)
-
+    tic
     
-    %% VECTOR DE ERRORES
-    he(:,k)= hd(:,k)-h(:,k);   
-    
-    %% VECTOR DE VELOCIDADES DESEADAS
-    hdp(:,k)=[hxdp(k) hydp(k) hzdp(k)]';
     
     %% Controlador Jacobiano
-    qpref = Controler(l2,l3,l4,q(:,k),he(:,k),hdp(:,k));
+    msg_control = receive(control_sub, 1); % Espera hasta 10 segundos por un mensaje
+    qpref = msg_control.Axes
     
     q(:,k+1) = ts*qpref+q(:,k);
     %% CINEMATICA DIRECTA
     
-    
+    state_msg.Axes = [q(:,k+1) [0,0,0,0]'];
+    send(state_topic, state_msg);
+
+        
     h(:,k+1) = CDArm4DOF(l1,l2,l3,l4,q(:,k+1));
     
-    
+    while toc < ts
+    end
     
     
     %%
@@ -103,16 +91,18 @@ toc
 %% ANIMACION
 figure(2)
 axis equal
+
+
  DimensionesManipulador_i(0,l1,l2,l3,l4,1);
 h1=Manipulador3D(0,0,0,q1(1),q2(1),q3(1),q4(1));
-h2=plot3(hx(1),hy(1),hz(1),'*r'); hold on
-h3=plot3(hxd,hyd,hzd,'*b');
+h2=plot3(0,0,0,'*r'); hold on
+h3=plot3(0,00,00,'*b');
 view(3)
 axis equal 
 pause=10;
 
 %% ANIMACION FOR
-for i=1:pause:length(t)
+for i=1:2:length(t)
   drawnow;
   delete(h1);
   delete(h2);

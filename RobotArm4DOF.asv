@@ -38,19 +38,19 @@ hz=h(3);
 % hzd= 0.3;
 
 
-% hxd= 4 * np.sin(value*0.04*t) + 3;
-% hyd= 0.5 * np.sin(0.08*t); 
-% hzd= 2 * np.sin(value*0.08*t) + 6
-value  = 1
-hxd =  0.025 * sin(value*0.08*t)  + 0.15
-hyd = 0.1 * sin(value*0.04*t)
-hzd = 0.05 * sin(value*0.08*t)  + 0.1
+hxd= 4 * np.sin(value*0.04*t) + 3;
+hyd= 0.5 * np.sin(0.08*t); 
+hzd= 2 * np.sin(value*0.08*t) + 6
+
+xd = lambda t: 4 * np.sin(value*0.04*t) + 3
+    yd = lambda t: 0.5 * np.sin(0.08*t)
+    zd = lambda t: 4 * np.sin(value*0.08*t) + 6
 
 hd = [hxd; hyd; hzd];
 % %% VELOCIDAD DESEADA
-hxdp=  0.025 * value* 0.08 * cos(value*0.08*t);
-hydp= 0.1 * value * 0.04 * cos(value*0.04*t);
-hzdp= 0.05 * value* 0.08 * cos(value*0.08*t);
+hxdp=  0.15.*cos(.1*t)*.1;
+hydp= -0.15.*sin(.1*t)*.1;
+hzdp= -0.003*ones(1,length(t));
 
 %% CONTROL
 tic

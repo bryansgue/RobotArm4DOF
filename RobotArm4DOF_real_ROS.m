@@ -3,14 +3,11 @@
 %*******************************CONTROL DE POSICION SCARA***************************************************
 %**********************************************************************************************************
 clc; clear all; close all; warning off;
-tfin = 100; 
-ts   = .1;
+tfin = 30;
+f = 30;
+ts   = 1/f;
 t    = 0:ts:tfin;
-%% CONDICIONES INICIALES
-q1(1) = 0*pi/180;               %ESLABON1
-q2(1) = 45*pi/180;               %Posición articulacion dos
-q3(1) = -30*pi/180;               %Posición articulacion tres
-q4(1) = -15*pi/180;
+
 
 % POSICIONES DESEADAS DE LOS ESLABONES PARA AHORRAR ENERGIA
 q1d = 30*pi/180;               
@@ -25,26 +22,13 @@ l2 =0.071;
 l3 =0.071;          
 l4 =0.15;
 
-q(:,1) = [q1,q2,q3,q4];
-%% CINEMATICA DIRECTA 
-h = CDArm4DOF(l1,l2,l3,l4,q(:,1));
-hx=h(1);
-hy=h(2);
-hz=h(3);
+
    
 %% TRAYECTORIA DESEADA GRIPPER
-% hxd= 0.2;
-% hyd= 0.5; 
-% hzd= 0.3;
-
-
-% hxd= 4 * np.sin(value*0.04*t) + 3;
-% hyd= 0.5 * np.sin(0.08*t); 
-% hzd= 2 * np.sin(value*0.08*t) + 6
-value  = 1
-hxd =  0.025 * sin(value*0.08*t)  + 0.15
-hyd = 0.1 * sin(value*0.04*t)
-hzd = 0.05 * sin(value*0.08*t)  + 0.1
+value  = 9;
+hxd =  0.025 * sin(value*0.08*t)  + 0.15;
+hyd = 0.1 * sin(value*0.04*t);
+hzd = 0.05 * sin(value*0.08*t)  + 0.125;
 
 hd = [hxd; hyd; hzd];
 % %% VELOCIDAD DESEADA
@@ -52,10 +36,43 @@ hxdp=  0.025 * value* 0.08 * cos(value*0.08*t);
 hydp= 0.1 * value * 0.04 * cos(value*0.04*t);
 hzdp= 0.05 * value* 0.08 * cos(value*0.08*t);
 
-%% CONTROL
-tic
-for k=1:length(t)
 
+%% Lectura de posiciones del brazo for ROS
+
+rosshutdown
+setenv('ROS_MASTER_URI','http://192.168.88.252:11311')
+% setenv('ROS_IP','192.168.88.104')
+rosinit
+
+[velControl_topic, velControl_msg] = rospublisher('/joy','sensor_msgs/Joy');
+axe = [0.0 0 0 0];
+% Establecer los valores de axe en el mensaje
+velControl_msg.Axes = axe;
+% Publicar el mensaje en el tópico '/joy'
+send(velControl_topic, velControl_msg);
+
+
+armSub = rossubscriber('/dynamixel_workbench/joint_states');
+[pos_arm,ver_arm,current_arm] = dynamixeldata(armSub);
+
+
+    q1(1) = pos_arm(1);
+    q2(1) = pos_arm(2);
+    q3(1) = pos_arm(3);
+    q4(1) = pos_arm(4);
+
+    q(:,1) = [q1,q2,q3,q4];
+    
+%% CINEMATICA DIRECTA 
+h = CDArm4DOF(l1,l2,l3,l4,q(:,1));
+hx=h(1);
+hy=h(2);
+hz=h(3);
+
+%% CONTROL
+
+for k=1:length(t)
+    tic
     
     %% VECTOR DE ERRORES
     he(:,k)= hd(:,k)-h(:,k);   
@@ -66,17 +83,39 @@ for k=1:length(t)
     %% Controlador Jacobiano
     qpref = Controler(l2,l3,l4,q(:,k),he(:,k),hdp(:,k));
     
-    q(:,k+1) = ts*qpref+q(:,k);
+%     q(:,k+1) = ts*qpref+q(:,k);
+    
+    [pos_arm,ver_arm,current_arm] = dynamixeldata(armSub);
+
+    q(:,k+1) = [pos_arm(1) pos_arm(2) pos_arm(3) pos_arm(4)];
+    
     %% CINEMATICA DIRECTA
     
     
     h(:,k+1) = CDArm4DOF(l1,l2,l3,l4,q(:,k+1));
     
+    axe = [qpref(1) qpref(2) qpref(3) qpref(4)];
+    % Establecer los valores de axe en el mensaje
+    velControl_msg.Axes = axe;
+    % Publicar el mensaje en el tópico '/joy'
+    send(velControl_topic, velControl_msg);
     
+    
+    
+     while toc<ts   
+     end
+        
+   
+    toc
     
     
     %%
 end
+
+
+velControl_msg.Axes = [0.0 0 0 0];
+
+send(velControl_topic, velControl_msg);
 toc
 %% GRAFICAS DE ERROR
 % figure(1)
@@ -118,6 +157,8 @@ for i=1:pause:length(t)
   delete(h2);
   h1=Manipulador3D(0,0,0,q(1,i),q(2,i),q(3,i),q(4,i));hold on
   h2=plot3(h(1,1:i),h(2,1:i),h(3,1:i),'*r'); hold on  
+  
+%   pause(5)
 end
 
 
